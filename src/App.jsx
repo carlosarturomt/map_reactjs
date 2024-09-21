@@ -10,6 +10,8 @@ function App() {
   const [isPanning, setIsPanning] = useState(false); // Estado para saber si estamos arrastrando
   const [origin, setOrigin] = useState({ x: 0, y: 0 }); // Estado para almacenar el punto de inicio del arrastre
   const [translate, setTranslate] = useState({ x: 0, y: 0 }); // Estado para la traducción (desplazamiento)
+  const [pointerPosition, setPointerPosition] = useState({ x: 0, y: 0 });
+  const [vipSectionMark, setVipSectionMark] = useState(false);
 
   const svgRef = useRef(null);
 
@@ -28,20 +30,49 @@ function App() {
   };
 
   const handleMesaClick = (mesaId) => {
-    if (selectedMesa === mesaId) {
-      // Si la mesa ya está seleccionada, deseleccionarla junto con sus sillas
-      setSelectedMesa(null);
-      setSelectedSillas([]); // Deseleccionamos todas las sillas de la mesa
-    } else {
-      // Seleccionamos la mesa y sus sillas correspondientes
-      setSelectedMesa(mesaId);
-      setSelectedSilla(null); // Deseleccionamos cualquier silla individual seleccionada
+    if (!mesas || !Array.isArray(mesas)) {
+      console.error('La variable "mesas" no está definida o no es un array');
+      return;
+    }
 
-      // Seleccionamos todas las sillas correspondientes a la mesa seleccionada
-      const mesaSillas = sillas
-        .filter((silla) => silla.id.startsWith(`silla-${mesaId.split("-")[1]}_`))
-        .map((silla) => silla.id);
-      setSelectedSillas(mesaSillas);
+    if (mesaId.startsWith("vip-")) {
+      // Lógica para mesas VIP
+      if (selectedMesa === mesaId) {
+        setSelectedMesa(null);
+        setSelectedSillas([]);
+      } else {
+        setSelectedMesa(mesaId);
+        setSelectedSilla(null);
+        const vipSillas = sillas
+          .filter((silla) => silla.id.startsWith(`silla-${mesaId.split("-")[1]}_`))
+          .map((silla) => silla.id);
+        setSelectedSillas(vipSillas);
+      }
+    } else {
+      // Lógica para mesas normales
+      if (selectedMesa === mesaId) {
+        setSelectedMesa(null);
+        setSelectedSillas([]);
+      } else {
+        setSelectedMesa(mesaId);
+        setSelectedSilla(null);
+        const mesaSillas = sillas
+          .filter((silla) => silla.id.startsWith(`silla-${mesaId.split("-")[1]}_`))
+          .map((silla) => silla.id);
+        setSelectedSillas(mesaSillas);
+
+        // Restablecer el zoom al seleccionar una mesa
+        setScale(1);
+        setTranslate({ x: 0, y: 0 });
+
+        // Actualizar la posición del puntero
+        const mesa = mesas.find((mesa) => mesa.id === mesaId);
+        if (mesa) {
+          setPointerPosition({ x: mesa.cx, y: mesa.cy });
+        } else {
+          console.warn("No se encontró la mesa con id:", mesaId);
+        }
+      }
     }
   };
 
@@ -68,8 +99,9 @@ function App() {
 
   const mesas = [];
   const sillas = [];
-  const mesasPorFila = 20; // Cantidad de mesas por fila
+  const mesasPorFila = 20;
   const numSecciones = 10;
+  const letrasSecciones = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
   for (let i = 0; i < numMesas; i++) {
     // Calculamos la posición de la mesa
@@ -78,9 +110,11 @@ function App() {
 
     // Determinar a qué sección pertenece cada mesa
     const section = Math.floor(i / (numMesas / numSecciones)) + 1;
+    const sectionIndex = Math.floor(i / (numMesas / numSecciones)) % letrasSecciones.length;
+    const sectionLetter = letrasSecciones[sectionIndex];
 
     // Agregamos la mesa con su sección
-    mesas.push({ id: `mesa-${i + 1}`, cx: mesaX, cy: mesaY, section });
+    mesas.push({ id: `mesa-${i + 1}`, cx: mesaX, cy: mesaY, section, sectionLetter });
 
     // Agregamos las sillas para cada mesa
     for (let j = 0; j < sillasPorMesa; j++) {
@@ -99,14 +133,16 @@ function App() {
   // Manejar el zoom
   const handleWheel = (event) => {
     event.preventDefault();
-    const newScale = Math.min(Math.max(scale - event.deltaY * 0.01, 0.5), 5);
+    const newScale = Math.min(Math.max(scale - event.deltaY * 0.01, 0.7), 10);
     setScale(newScale);
   };
 
   // Iniciar arrastre
   const handleMouseDown = (event) => {
-    setIsPanning(true);
-    setOrigin({ x: event.clientX - translate.x, y: event.clientY - translate.y });
+    if (scale != 1) {
+      setIsPanning(true);
+      setOrigin({ x: event.clientX - translate.x, y: event.clientY - translate.y });
+    }
   };
 
   // Mover durante el arrastre
@@ -128,6 +164,12 @@ function App() {
   const handleCheckboxChange = (event) => {
     setSectionMark(event.target.checked);
   };
+
+  const handleVipCheckboxChange = (event) => {
+    setVipSectionMark(event.target.checked);
+  };
+
+  const cantidadSillas = selectedMesa && selectedMesa.includes("vip") ? 6 : 12;
 
   return (
     <div className="w-full h-full flex items-center justify-center bg-gray-50">
@@ -157,7 +199,7 @@ function App() {
           >
             <g>
               {/* Escenario */}
-              <g transform="translate(1800, -300)">
+              <g transform="translate(1800, -600)">
                 {/* Fondo del escenario */}
                 <rect x="50" y="-20" width="700" height="200" fill="#8A8A8A" />
                 {/* Texto "Escenario" dentro del fondo */}
@@ -181,11 +223,11 @@ function App() {
                 {Array.from({ length: 15 }, (_, i) => (
                   <g key={i} transform={`translate(0, ${i * 170})`}>
                     {/* Rectángulo de cada stand */}
-                    <rect x="0" y="0" width="150" height="150" fill="#8A8A8A" />
+                    <rect x="0" y="-50" width="150" height="150" fill="#8A8A8A" />
                     {/* Número dentro del stand */}
                     <text
                       x="75" // Centrado horizontalmente en el rectángulo (mitad de 150)
-                      y="85" // Centrado verticalmente en el rectángulo (mitad de 150)
+                      y="45" // Centrado verticalmente en el rectángulo (mitad de 150)
                       fill="white" // Color del texto
                       fontSize="50" // Tamaño del texto
                       fontWeight="bold" // Texto en negrita
@@ -202,11 +244,11 @@ function App() {
                 {Array.from({ length: 15 }, (_, i) => (
                   <g key={i + 15} transform={`translate(0, ${i * 170})`}>
                     {/* Rectángulo de cada stand */}
-                    <rect x="0" y="0" width="150" height="150" fill="#8A8A8A" />
+                    <rect x="0" y="-50" width="150" height="150" fill="#8A8A8A" />
                     {/* Número dentro del stand */}
                     <text
                       x="75" // Centrado horizontalmente en el rectángulo (mitad de 150)
-                      y="85" // Centrado verticalmente en el rectángulo (mitad de 150)
+                      y="45" // Centrado verticalmente en el rectángulo (mitad de 150)
                       fill="white" // Color del texto
                       fontSize="50" // Tamaño del texto
                       fontWeight="bold" // Texto en negrita
@@ -215,6 +257,67 @@ function App() {
                     >
                       {i + 16} {/* El número empieza desde 16 para los stands a la derecha */}
                     </text>
+                  </g>
+                ))}
+              </g>
+
+              {/* Entrada */}
+              <g transform="translate(-200, 2600)">
+                <rect x="0" y="0" width="1080" height="10" fill="#8A8A8A" />
+                <rect x="1170" y="0" width="12" height="60" fill="#8A8A8A" />
+                <rect x="1270" y="0" width="2340" height="10" fill="#8A8A8A" />
+                <rect x="3690" y="0" width="11" height="60" fill="#8A8A8A" />
+                <rect x="3770" y="0" width="1080" height="10" fill="#8A8A8A" />
+              </g>
+
+              {/* Mesas VIP */}
+              <g transform="translate(1210, -150)">
+                {Array.from({ length: 10 }, (_, i) => (
+                  <g key={i} transform={`translate(${i * 222})`} onClick={() => handleMesaClick(`vip-${i + 1}`)}>
+                    <circle
+                      r="40"
+                      fill={
+                        selectedMesa === "vip-" + (i + 1)
+                          ? "#022e5f"
+                          : hoveredMesa === "vip-" + (i + 1)
+                          ? "#0452AA"
+                          : vipSectionMark ? "#0452AA" : "#4c4c4c"
+                      }
+                      onMouseEnter={() => setHoveredMesa(`vip-${i + 1}`)}
+                      onMouseLeave={() => setHoveredMesa(null)}
+                    />
+                    <text
+                      x="0"
+                      y="10"
+                      fill="white"
+                      fontSize="20"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                      alignmentBaseline="middle"
+                    >
+                      btc-{i + 1}
+                    </text>
+                    {[...Array(6)].map((_, index) => {
+                      const positions = [
+                        [-70, 0],
+                        [-60, 30],
+                        [-30, 50],
+                        [10, 50],
+                        [40, 30],
+                        [55, 0],
+                      ];
+                      const [x, y] = positions[index];
+                      return (
+                        <rect
+                          key={index}
+                          x={x}
+                          y={y}
+                          width="15"
+                          height="15"
+                          fill={vipSectionMark ? "#022e5f" : "#4c4c4c"}
+                        />
+                      );
+                    })}
                   </g>
                 ))}
               </g>
@@ -267,6 +370,22 @@ function App() {
                   onMouseLeave={() => setHoveredMesa(null)} // Desactivar hover
                 />
               ))}
+
+              {/* Puntero para indicar la mesa */}
+              {selectedMesa && !selectedMesa.includes("vip") && selectedMesa && selectedSillas.length > 1 && (
+                <svg
+                  x={pointerPosition.x - 100}
+                  y={pointerPosition.y - 200}
+                  width="200"
+                  height="200"
+                  viewBox="0 0 304 432"
+                >
+                  <path
+                    fill="#e90628"
+                    d="M149 3q62 0 106 43.5T299 152q0 31-15.5 71.5t-37.5 75t-44 65t-37 48.5l-16 17q-6-6-16-18t-35.5-46.5t-45.5-67T16 224T0 152Q0 90 43.5 46.5T149 3m0 202q22 0 38-15.5t16-37.5t-16-37.5T149 99t-37.5 15.5T96 152t15.5 37.5T149 205"
+                  />
+                </svg>
+              )}
             </g>
           </svg>
         </div>
@@ -277,6 +396,13 @@ function App() {
           <h1 className="font-medium text-xl text-center text-[#022e5f]">
             {selectedSilla || selectedMesa ? "Tu selección" : "Selecciona"}
           </h1>
+        </hgroup>
+
+        <hgroup className="flex flex-col justify-center w-full border-t-2 mt-4 pt-4 border-gray-300">
+          <label className="text-xs uppercase flex items-center gap-1 text-[#022e5f]">
+            <input type="checkbox" id="vipCheckbox" checked={vipSectionMark} onChange={handleVipCheckboxChange} />
+            Resaltar zona VIP
+          </label>
         </hgroup>
 
         <hgroup className="flex flex-col justify-center w-full border-t-2 mt-4 pt-4 border-gray-300">
@@ -292,13 +418,18 @@ function App() {
           </label>
         </hgroup>
 
-        {(selectedSilla || selectedMesa) && (
+        {((selectedMesa && selectedSillas) || (selectedMesa && selectedSilla)) && (
           <div className="">
             <div className="w-full flex justify-beetween py-4 my-4 border-y-2 border-gray-300">
               <hgroup className="flex flex-col justify-center w-1/3 border-r-2 mr-3 border-gray-300">
-                <h3 className="text-xs uppercase text-[#022e5f]">Seccion</h3>
-                <p className="text-xl font-light">
-                  {selectedMesa ? mesas.find((mesa) => mesa.id === selectedMesa).section : "-"}
+                <h3 className="text-xs uppercase text-[#022e5f]">Sección</h3>
+                <p className="text-xl font-light uppercase">
+                  {selectedMesa
+                    ? (() => {
+                        const mesa = mesas.find((mesa) => mesa.id === selectedMesa);
+                        return mesa ? "General " + mesa.sectionLetter : "BTC";
+                      })()
+                    : "-"}
                 </p>
               </hgroup>
 
@@ -313,8 +444,17 @@ function App() {
                 <hgroup className="flex flex-col justify-center w-1/3">
                   <h3 className="text-xs uppercase text-[#022e5f]">{selectedSillas.length > 1 ? "Sillas" : "Silla"}</h3>
                   <p className="text-xl font-light">
-                    {selectedSillas.length > 0
+                    {/* {selectedSillas.length > 0
                       ? selectedSillas.map((silla) => silla.replace("silla-", "")).join(", ")
+                      : "-"} */}
+                    {selectedSillas.length > 0
+                      ? selectedSillas
+                          .filter((silla) =>
+                            silla.startsWith(`silla-${getMesaFromSilla(selectedSilla || selectedMesa)}_`)
+                          )
+                          .slice(0, selectedMesa.includes("vip") ? 6 : 12) // Muestra solo seis sillas si es VIP
+                          .map((silla) => silla.replace("silla-", ""))
+                          .join(", ")
                       : "-"}
                   </p>
                 </hgroup>
@@ -325,10 +465,18 @@ function App() {
             {/* Mostrar la mesa y las sillas cuando se selecciona una silla */}
             {((selectedMesa && selectedSillas) || (selectedMesa && selectedSilla)) && (
               <svg width="111" height="111" viewBox="0 0 200 200" className="w-full h-full">
-                <circle cx="100" cy="100" r="40" fill="#022e5f" stroke="black" strokeWidth="0" />
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="40"
+                  fill={selectedMesa.includes("vip") ? "#0452AA" : "#022e5f"}
+                  stroke="black"
+                  strokeWidth="0"
+                />
 
                 {sillas
                   .filter((silla) => silla.id.startsWith(`silla-${getMesaFromSilla(selectedSilla || selectedMesa)}_`))
+                  .slice(0, cantidadSillas)
                   .map((silla, index) => (
                     <rect
                       key={silla.id}
