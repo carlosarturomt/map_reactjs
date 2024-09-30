@@ -15,6 +15,9 @@ function App() {
 	const [vipSectionMark, setVipSectionMark] = useState(false);
 	const [showModal, setShowModal] = useState(false);
 	const [readyToPay, setReadyToPay] = useState(false);
+	const [breackfast, setBreackfast] = useState(false);
+	const [lunch, setLunch] = useState(false);
+	const [dinner, setDinner] = useState(false);
 
 	const svgRef = useRef(null);
 
@@ -91,12 +94,20 @@ function App() {
 		}
 	};
 
+	// Definir el tamaño de la pista de baile
+	const pistaAncho = 750; // Ancho de la pista
+	const pistaAlto = 500; // Alto de la pista
+
+	// Definir la posición de la pista de baile
+	const pistaX = 1825; // Posición X de la pista (ajústala según tu diseño)
+	const pistaY = 950; // Posición Y de la pista (ajústala según tu diseño)
+
 	// Definimos cuántas mesas y sillas vamos a tener
-	const numMesas = 200; // Puedes ajustar este valor
+	const numMesas = 200; // Número total de mesas requeridas
 	const sillasPorMesa = 10; // Sillas por mesa
 	// Definimos los espacios entre las mesas
 	const mesaSpacingX = 222; // Distancia horizontal entre mesas
-	const mesaSpacingY = 244; // Distancia vertical entre mes
+	const mesaSpacingY = 244; // Distancia vertical entre mesas
 
 	// Las sillas estarán distribuidas alrededor de cada mesa
 	const sillaOffset = [
@@ -114,39 +125,69 @@ function App() {
 
 	const mesas = [];
 	const sillas = [];
-	const mesasPorFila = 20;
-	const numSecciones = 10;
+	const mesasPorFila = 20; // Número de mesas por fila
+	const numSecciones = 10; // Número de secciones
 	const letrasSecciones = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-	for (let i = 0; i < numMesas; i++) {
+	// Función que determina si la mesa cae dentro de la pista de baile
+	const isInsidePista = (mesaX, mesaY) => {
+		return (
+			mesaX > pistaX &&
+			mesaX < pistaX + pistaAncho &&
+			mesaY > pistaY &&
+			mesaY < pistaY + pistaAlto
+		);
+	};
+
+	let mesaNumero = 1; // Contador para el número de mesa visible
+	let mesasColocadas = 0; // Contador de mesas que han sido colocadas (válidas)
+	let fila = 0; // Contador de filas
+	let i = 0; // Contador de iteraciones
+
+	// Bucle para generar las mesas
+	while (mesasColocadas < numMesas) {
 		// Calculamos la posición de la mesa
 		const mesaX = 100 + (i % mesasPorFila) * mesaSpacingX;
-		const mesaY = 100 + Math.floor(i / mesasPorFila) * mesaSpacingY;
+		const mesaY = 100 + fila * mesaSpacingY;
 
-		// Determinar a qué sección pertenece cada mesa
-		const section = Math.floor(i / (numMesas / numSecciones)) + 1;
-		const sectionIndex =
-			Math.floor(i / (numMesas / numSecciones)) % letrasSecciones.length;
-		const sectionLetter = letrasSecciones[sectionIndex];
+		if (!isInsidePista(mesaX, mesaY)) {
+			// Si la mesa NO está dentro de la pista de baile, la agregamos
+			const section =
+				Math.floor(mesasColocadas / (numMesas / numSecciones)) + 1;
+			const sectionIndex =
+				Math.floor(mesasColocadas / (numMesas / numSecciones)) %
+				letrasSecciones.length;
+			const sectionLetter = letrasSecciones[sectionIndex];
 
-		// Agregamos la mesa con su sección
-		mesas.push({
-			id: `mesa-${i + 1}`,
-			cx: mesaX,
-			cy: mesaY,
-			section,
-			sectionLetter,
-		});
-
-		// Agregamos las sillas para cada mesa
-		for (let j = 0; j < sillasPorMesa; j++) {
-			const sillaX = mesaX + sillaOffset[j].x;
-			const sillaY = mesaY + sillaOffset[j].y;
-			sillas.push({
-				id: `silla-${i + 1}_${String.fromCharCode(97 + j)}`,
-				x: sillaX,
-				y: sillaY,
+			// Agregamos la mesa con su sección y usamos mesaNumero
+			mesas.push({
+				id: `mesa-${mesaNumero}`,
+				cx: mesaX,
+				cy: mesaY,
+				section,
+				sectionLetter,
 			});
+
+			// Agregamos las sillas para cada mesa
+			for (let j = 0; j < sillasPorMesa; j++) {
+				const sillaX = mesaX + sillaOffset[j].x;
+				const sillaY = mesaY + sillaOffset[j].y;
+				sillas.push({
+					id: `silla-${mesaNumero}_${String.fromCharCode(97 + j)}`,
+					x: sillaX,
+					y: sillaY,
+				});
+			}
+
+			mesaNumero++; // Incrementamos el número de mesa visible
+			mesasColocadas++; // Incrementamos el contador de mesas válidas (fuera de la pista)
+		}
+
+		i++; // Incrementamos el contador de iteraciones
+
+		// Si llegamos al final de la fila, incrementamos el contador de fila
+		if (i % mesasPorFila === 0) {
+			fila++;
 		}
 	}
 
@@ -208,7 +249,7 @@ function App() {
 				<div className="bg-white rounded-lg p-6 w-full max-w-md">
 					<h2 className="text-xl font-semibold mb-4">Confirmar Resevación</h2>
 					<p>
-						Usted va a reservar la{" "}
+						Usted {readyToPay ? "ha reservado " : "va a reservar la "}
 						<strong>mesa {mesa.replace("mesa-", "")}</strong> y las sillas:
 					</p>
 					<p>
@@ -228,7 +269,21 @@ function App() {
 						.
 					</p>
 
-					<p>¿Está seguro?</p>
+					{readyToPay && (
+						<div>
+							<p className="py-2">
+								Además de que ha seleccionado reservar el menú de{" "}
+								<strong>
+									{breackfast &&
+										"Desayuno" + lunch &&
+										"Comida" + dinner &&
+										"Cena"}
+								</strong>
+							</p>
+						</div>
+					)}
+
+					<p className="py-2">¿Está seguro?</p>
 					<div className="mt-6 flex justify-end space-x-3">
 						<button
 							className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
@@ -254,12 +309,22 @@ function App() {
 			sillas: selectedSillas,
 		});
 		setShowModal(true);
-		setReadyToPay(true);
+		//setReadyToPay(true);
+		//console.log(mesas);
+	};
+
+	const submitHandleTotal = () => {
+		setData({
+			mesa: selectedMesa,
+			sillas: selectedSillas,
+		});
+		setShowModal(true);
 		//console.log(mesas);
 	};
 
 	const handleConfirm = () => {
 		setShowModal(false);
+		setReadyToPay(true);
 	};
 
 	const handleClose = () => {
@@ -382,6 +447,30 @@ function App() {
 								<rect x="1270" y="0" width="2340" height="10" fill="#d1d5db" />
 								<rect x="3690" y="0" width="11" height="60" fill="#d1d5db" />
 								<rect x="3770" y="0" width="1080" height="10" fill="#d1d5db" />
+							</g>
+
+							{/* Pista de Baile */}
+							<g transform={`translate(${pistaX}, ${pistaY})`}>
+								{/* Fondo de la pista de baile */}
+								<rect
+									x="0"
+									y="0"
+									width={pistaAncho}
+									height={pistaAlto}
+									fill="#737373" // Color de la pista
+								/>
+								{/* Texto "Pista de Baile" */}
+								<text
+									x={pistaAncho / 2} // Centrar horizontalmente
+									y={pistaAlto / 1.8} // Centrar verticalmente
+									fill="white"
+									fontSize="90"
+									fontWeight={400}
+									textAnchor="middle"
+									alignmentBaseline="middle"
+								>
+									PISTA DE BAILE
+								</text>
 							</g>
 
 							{/* Mesas VIP */}
@@ -932,7 +1021,7 @@ function App() {
 											type="checkbox"
 											id="vipCheckbox"
 											//checked={vipSectionMark}
-											//onChange={handleVipCheckboxChange}
+											onChange={() => setBreackfast(true)}
 										/>
 										Desayuno
 									</label>
@@ -957,6 +1046,7 @@ function App() {
 								</hgroup>
 								<button
 									className={`w-full py-2 mt-8 mb-20 rounded-lg font-medium text-white transition-colors bg-[#3b82f6] hover:bg-[#034a84]`}
+									onClick={readyToPay && submitHandleTotal}
 								>
 									Reservar
 								</button>
