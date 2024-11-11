@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { UserDataContext } from "@context/userDataContext";
+import { collection, addDoc } from "firebase/firestore";
+import { db, auth } from "@services/firebase/config";
 
 function MapPage() {
 	const [data, setData] = useState({ mesa: "", sillas: "" });
@@ -15,11 +18,11 @@ function MapPage() {
 	const [vipSectionMark, setVipSectionMark] = useState(false);
 	const [showModal, setShowModal] = useState(false);
 	const [readyToPay, setReadyToPay] = useState(false);
-	const [breackfast, setBreackfast] = useState(false);
+	const [breakfast, setBreakfast] = useState(false);
 	const [lunch, setLunch] = useState(false);
 	const [dinner, setDinner] = useState(false);
-	const [reserverName, setReserverName] = useState("");
 
+	const { user } = useContext(UserDataContext);
 
 	const svgRef = useRef(null);
 
@@ -276,10 +279,13 @@ function MapPage() {
 							<p className="py-2">
 								Además de que ha seleccionado reservar el menú de{" "}
 								<strong>
-									{breackfast &&
-										"Desayuno" + lunch &&
-										"Comida" + dinner &&
-										"Cena"}
+								{[
+                                    breakfast && "Desayuno",
+                                    lunch && "Comida",
+                                    dinner && "Cena"
+                                ]
+                                    .filter(Boolean)
+                                    .join(", ")}
 								</strong>
 							</p>
 						</div>
@@ -309,22 +315,46 @@ function MapPage() {
 		setData({
 			mesa: selectedMesa,
 			sillas: selectedSillas,
+			/* section: {(() => {
+				const mesa = mesas.find((mesa) => mesa.id === selectedMesa);
+				return mesa ? `General ${mesa.sectionLetter}` : "BTC";
+			})()}, */
+			breakfast,
+			lunch,
+			dinner,
+			user: user && user.email,
+			timestamp: new Date(),
 		});
 		setShowModal(true);
-		//setReadyToPay(true);
-		//console.log(mesas);
 	};
 
 	const submitHandleTotal = () => {
+
+		const mesaObj = mesas.find((mesa) => mesa.id === selectedMesa);
+		const section = mesaObj ? mesaObj.sectionLetter : "BTC";
+
 		setData({
+			section: `General ${section}`,
 			mesa: selectedMesa,
 			sillas: selectedSillas,
+			breakfast,
+			lunch,
+			dinner,
+			user: user && user.email,
+			timestamp: new Date(),
 		});
 		setShowModal(true);
-		//console.log(mesas);
 	};
 
-	const handleConfirm = () => {
+	const handleConfirm = async () => {
+		console.log('Confirm: ', data);
+		try {
+			await addDoc(collection(db, "reservedTables"), data);
+			setData(data); // Actualiza el estado de los datos si es necesario
+			setShowModal(true); // Muestra el modal
+		} catch (error) {
+			console.error("Error al guardar en Firebase: ", error);
+		}
 		setShowModal(false);
 		setReadyToPay(true);
 	};
@@ -490,10 +520,10 @@ function MapPage() {
 												selectedMesa === "vip-" + (i + 1)
 													? "#034a84"
 													: hoveredMesa === "vip-" + (i + 1)
-													? "#276bb0"
-													: vipSectionMark
-													? "#276bb0"
-													: "#5e5e5e"
+														? "#276bb0"
+														: vipSectionMark
+															? "#276bb0"
+															: "#5e5e5e"
 											}
 											onMouseEnter={() => setHoveredMesa(`vip-${i + 1}`)}
 											onMouseLeave={() => setHoveredMesa(null)}
@@ -546,10 +576,10 @@ function MapPage() {
 											selectedMesa === mesa.id
 												? "#034a84"
 												: hoveredMesa === mesa.id // Si esta mesa está en hover, cambiar el color
-												? "#276bb0" // Color cuando se hace hover
-												: sectionMark
-												? `hsl(${mesa.section * 60}, 50%, 50%)`
-												: "#5e5e5e"
+													? "#276bb0" // Color cuando se hace hover
+													: sectionMark
+														? `hsl(${mesa.section * 60}, 50%, 50%)`
+														: "#5e5e5e"
 										}
 										onMouseEnter={() => setHoveredMesa(mesa.id)} // Activar hover
 										onMouseLeave={() => setHoveredMesa(null)} // Desactivar hover
@@ -580,8 +610,8 @@ function MapPage() {
 										selectedSillas.includes(silla.id)
 											? "#034a84"
 											: hoveredMesa == silla.id
-											? "#276bb0"
-											: "#5e5e5e"
+												? "#276bb0"
+												: "#5e5e5e"
 									}
 									onClick={() => handleSillaClick(silla.id)}
 									onMouseEnter={() => setHoveredMesa(silla.id)} // Activar hover
@@ -646,39 +676,39 @@ function MapPage() {
 
 				{((selectedMesa && selectedSillas) ||
 					(selectedMesa && selectedSilla)) && (
-					<div className="">
-						<div className="w-full flex justify-beetween py-4 my-4 border-y-2 border-gray-300">
-							<hgroup className="flex flex-col justify-center w-1/3 border-r-2 mr-3 border-gray-300">
-								<h3 className="text-xs uppercase text-[#034a84]">Sección</h3>
-								<p className="text-xl font-light text-[#333333] uppercase">
-									{selectedMesa
-										? (() => {
+						<div className="">
+							<div className="w-full flex justify-beetween py-4 my-4 border-y-2 border-gray-300">
+								<hgroup className="flex flex-col justify-center w-1/3 border-r-2 mr-3 border-gray-300">
+									<h3 className="text-xs uppercase text-[#034a84]">Sección</h3>
+									<p className="text-xl font-light text-[#333333] uppercase">
+										{selectedMesa
+											? (() => {
 												const mesa = mesas.find(
 													(mesa) => mesa.id === selectedMesa
 												);
 												return mesa ? "General " + mesa.sectionLetter : "BTC";
-										  })()
-										: "-"}
-								</p>
-							</hgroup>
-
-							{(selectedMesa || selectedSilla) && (
-								<hgroup className="flex flex-col justify-center w-1/3 border-r-2 mr-3 border-gray-300">
-									<h3 className="text-xs uppercase text-[#034a84]">Mesa</h3>
-									<p className="text-xl font-light text-[#333333]">
-										{selectedMesa ? selectedMesa.replace("mesa-", "") : "-"}
+											})()
+											: "-"}
 									</p>
 								</hgroup>
-							)}
 
-							{selectedSillas && (
-								<hgroup className="flex flex-col justify-center w-1/3">
-									<h3 className="text-xs uppercase text-[#034a84]">
-										{selectedSillas.length > 1 ? "Sillas" : "Silla"}
-									</h3>
-									<p className="text-xl font-light text-[#333333]">
-										{selectedSillas.length > 0
-											? selectedSillas
+								{(selectedMesa || selectedSilla) && (
+									<hgroup className="flex flex-col justify-center w-1/3 border-r-2 mr-3 border-gray-300">
+										<h3 className="text-xs uppercase text-[#034a84]">Mesa</h3>
+										<p className="text-xl font-light text-[#333333]">
+											{selectedMesa ? selectedMesa.replace("mesa-", "") : "-"}
+										</p>
+									</hgroup>
+								)}
+
+								{selectedSillas && (
+									<hgroup className="flex flex-col justify-center w-1/3">
+										<h3 className="text-xs uppercase text-[#034a84]">
+											{selectedSillas.length > 1 ? "Sillas" : "Silla"}
+										</h3>
+										<p className="text-xl font-light text-[#333333]">
+											{selectedSillas.length > 0
+												? selectedSillas
 													.filter((silla) =>
 														silla.startsWith(
 															`silla-${getMesaFromSilla(
@@ -689,264 +719,264 @@ function MapPage() {
 													.slice(0, selectedMesa.includes("vip") ? 6 : 12) // Muestra solo seis sillas si es VIP
 													.map((silla) => silla.replace("silla-", ""))
 													.join(", ")
-											: "-"}
-									</p>
-								</hgroup>
-							)}
-							{/* <p>Estado: {selectedSilla === "silla-1a" ? "Ocupada" : "Disponible"}</p> */}
-						</div>
+												: "-"}
+										</p>
+									</hgroup>
+								)}
+								{/* <p>Estado: {selectedSilla === "silla-1a" ? "Ocupada" : "Disponible"}</p> */}
+							</div>
 
-						{/* Mostrar la mesa y las sillas cuando se selecciona una silla o mesa */}
-						{((selectedMesa && selectedSillas) ||
-							(selectedMesa && selectedSilla)) && (
-							<svg
-								width="400"
-								height="222"
-								viewBox="0 100 400 200"
-								xmlns="http://www.w3.org/2000/svg"
-								className="w-full h-full"
-							>
-								{/* Definimos degradado para la mesa */}
-								<defs>
-									<radialGradient id="tableGradient" cx="50%" cy="50%" r="50%">
-										<stop
-											offset="0%"
-											style={{ stopColor: "#f0f8ff", stopOpacity: 1 }}
-										/>
-										<stop
-											offset="100%"
-											style={{ stopColor: "#034a84", stopOpacity: 1 }}
-										/>
-									</radialGradient>
-									<filter
-										id="shadow"
-										x="-50%"
-										y="-50%"
-										width="200%"
-										height="200%"
+							{/* Mostrar la mesa y las sillas cuando se selecciona una silla o mesa */}
+							{((selectedMesa && selectedSillas) ||
+								(selectedMesa && selectedSilla)) && (
+									<svg
+										width="400"
+										height="222"
+										viewBox="0 100 400 200"
+										xmlns="http://www.w3.org/2000/svg"
+										className="w-full h-full"
 									>
-										<feDropShadow
-											dx="0"
-											dy="10"
-											stdDeviation="15"
-											floodColor="rgba(0,0,0,0.2)"
-										/>
-									</filter>
-								</defs>
-
-								{/* Patas de la mesa */}
-								<rect
-									x="100"
-									y="220"
-									width="10"
-									height="40"
-									fill="#012c4f" // Color madera
-									style={{ filter: "url(#shadow)" }}
-								/>
-								<rect
-									x="160"
-									y="240"
-									width="10"
-									height="40"
-									fill="#012c4f" // Color madera
-									style={{ filter: "url(#shadow)" }}
-								/>
-								<rect
-									x="240"
-									y="240"
-									width="10"
-									height="40"
-									fill="#012c4f" // Color madera
-									style={{ filter: "url(#shadow)" }}
-								/>
-								<rect
-									x="290"
-									y="180"
-									width="10"
-									height="80"
-									fill="#012c4f" // Color madera
-									style={{ filter: "url(#shadow)" }}
-								/>
-
-								{/* Sillas distribuidas alrededor de la mesa */}
-								{sillas
-									.filter((silla) =>
-										silla.id.startsWith(
-											`silla-${getMesaFromSilla(
-												selectedSilla || selectedMesa
-											)}_`
-										)
-									)
-									.slice(0, cantidadSillas)
-									.map((silla, index) => {
-										// Ajusta el ángulo para considerar la forma elíptica de la mesa
-										const angle =
-											(index / cantidadSillas) *
-											(vipSectionMark ? 1.2 : 2.35) *
-											Math.PI;
-										const xOffset = Math.cos(angle) * 140;
-										const yOffset = Math.sin(angle) * 75; // Ajuste en el eje y para la perspectiva elíptica
-
-										return (
-											<g key={silla.id}>
-												{/* Cuerpo de la silla */}
-												<rect
-													x={200 + xOffset - 15}
-													y={200 + yOffset - 10}
-													width="30"
-													height="20"
-													rx="5" // Borde redondeado
-													ry="5" // Borde redondeado
-													fill={
-														selectedSillas.includes(silla.id) ||
-														silla.id === selectedSilla
-															? "#034a84"
-															: "#5e5e5e"
-													}
-													strokeWidth={silla.id === selectedSilla ? "2" : "1"}
-													onClick={() => handleSillaClick(silla.id)}
-													className="cursor-pointer"
-													style={{
-														transition: "all 0.3s ease-in-out",
-														transform:
-															selectedSillas.includes(silla.id) ||
-															silla.id === selectedSilla
-																? "scale(1.01)"
-																: "scale(1)",
-														filter:
-															selectedSillas.includes(silla.id) ||
-															silla.id === selectedSilla
-																? "drop-shadow(0 0 10px #034a84)"
-																: "none",
-													}}
+										{/* Definimos degradado para la mesa */}
+										<defs>
+											<radialGradient id="tableGradient" cx="50%" cy="50%" r="50%">
+												<stop
+													offset="0%"
+													style={{ stopColor: "#f0f8ff", stopOpacity: 1 }}
 												/>
-												{/* Patas de la silla */}
-												<rect
-													x={195 + xOffset - 7}
-													y={200 + yOffset + 10}
-													width="5"
-													height="15"
-													fill={
-														selectedSillas.includes(silla.id) ||
-														silla.id === selectedSilla
-															? "#012c4f"
-															: "#414141"
-													}
-													style={{
-														transition: "all 0.3s ease-in-out",
-														transform:
-															selectedSillas.includes(silla.id) ||
-															silla.id === selectedSilla
-																? "scale(1.01)"
-																: "scale(1)",
-														filter:
-															selectedSillas.includes(silla.id) ||
-															silla.id === selectedSilla
-																? "drop-shadow(0 0 10px #034a84)"
-																: "none",
-													}}
+												<stop
+													offset="100%"
+													style={{ stopColor: "#034a84", stopOpacity: 1 }}
 												/>
-												<rect
-													x={195 + xOffset + 10}
-													y={200 + yOffset + 10}
-													width="5"
-													height="15"
-													fill={
-														selectedSillas.includes(silla.id) ||
-														silla.id === selectedSilla
-															? "#012c4f"
-															: "#414141"
-													}
-													style={{
-														transition: "all 0.3s ease-in-out",
-														transform:
-															selectedSillas.includes(silla.id) ||
-															silla.id === selectedSilla
-																? "scale(1.01)"
-																: "scale(1)",
-														filter:
-															selectedSillas.includes(silla.id) ||
-															silla.id === selectedSilla
-																? "drop-shadow(0 0 10px #034a84)"
-																: "none",
-													}}
+											</radialGradient>
+											<filter
+												id="shadow"
+												x="-50%"
+												y="-50%"
+												width="200%"
+												height="200%"
+											>
+												<feDropShadow
+													dx="0"
+													dy="10"
+													stdDeviation="15"
+													floodColor="rgba(0,0,0,0.2)"
 												/>
-											</g>
-										);
-									})}
+											</filter>
+										</defs>
 
-								{/* Mesa redonda con perspectiva */}
-								<ellipse
-									cx="200"
-									cy="200"
-									rx="120"
-									ry="60"
-									fill="url(#tableGradient)"
-									stroke="#034a84"
-									strokeWidth="2"
-									style={{ filter: "url(#shadow)" }}
-								/>
-							</svg>
-						)}
+										{/* Patas de la mesa */}
+										<rect
+											x="100"
+											y="220"
+											width="10"
+											height="40"
+											fill="#012c4f" // Color madera
+											style={{ filter: "url(#shadow)" }}
+										/>
+										<rect
+											x="160"
+											y="240"
+											width="10"
+											height="40"
+											fill="#012c4f" // Color madera
+											style={{ filter: "url(#shadow)" }}
+										/>
+										<rect
+											x="240"
+											y="240"
+											width="10"
+											height="40"
+											fill="#012c4f" // Color madera
+											style={{ filter: "url(#shadow)" }}
+										/>
+										<rect
+											x="290"
+											y="180"
+											width="10"
+											height="80"
+											fill="#012c4f" // Color madera
+											style={{ filter: "url(#shadow)" }}
+										/>
 
-						{((selectedMesa && selectedSillas) ||
-							(selectedMesa && selectedSilla)) && (
-							<button
-								onClick={!readyToPay && submitHandle}
-								className={`w-full py-2 mt-8 rounded-lg font-medium text-white transition-colors ${
-									readyToPay
-										? "cursor-default bg-[#3b82f6]/10"
-										: "bg-[#3b82f6] hover:bg-[#034a84]"
-								}`}
-							>
-								Reservar
-							</button>
-						)}
+										{/* Sillas distribuidas alrededor de la mesa */}
+										{sillas
+											.filter((silla) =>
+												silla.id.startsWith(
+													`silla-${getMesaFromSilla(
+														selectedSilla || selectedMesa
+													)}_`
+												)
+											)
+											.slice(0, cantidadSillas)
+											.map((silla, index) => {
+												// Ajusta el ángulo para considerar la forma elíptica de la mesa
+												const angle =
+													(index / cantidadSillas) *
+													(vipSectionMark ? 1.2 : 2.35) *
+													Math.PI;
+												const xOffset = Math.cos(angle) * 140;
+												const yOffset = Math.sin(angle) * 75; // Ajuste en el eje y para la perspectiva elíptica
 
-						{readyToPay && (
-							<>
-								<h1 className="font-medium text-xl text-center border-t-2 mt-4 pt-4 border-gray-300 text-[#034a84]">
-									Reservar Menú
-								</h1>
-								<hgroup className="flex gap-12 justify-center w-full mt-4">
-									<label className="text-xs uppercase flex items-center gap-1 text-[#034a84]">
-										<input
-											type="checkbox"
-											id="vipCheckbox"
-											//checked={vipSectionMark}
-											onChange={() => setBreackfast(true)}
+												return (
+													<g key={silla.id}>
+														{/* Cuerpo de la silla */}
+														<rect
+															x={200 + xOffset - 15}
+															y={200 + yOffset - 10}
+															width="30"
+															height="20"
+															rx="5" // Borde redondeado
+															ry="5" // Borde redondeado
+															fill={
+																selectedSillas.includes(silla.id) ||
+																	silla.id === selectedSilla
+																	? "#034a84"
+																	: "#5e5e5e"
+															}
+															strokeWidth={silla.id === selectedSilla ? "2" : "1"}
+															onClick={() => handleSillaClick(silla.id)}
+															className="cursor-pointer"
+															style={{
+																transition: "all 0.3s ease-in-out",
+																transform:
+																	selectedSillas.includes(silla.id) ||
+																		silla.id === selectedSilla
+																		? "scale(1.01)"
+																		: "scale(1)",
+																filter:
+																	selectedSillas.includes(silla.id) ||
+																		silla.id === selectedSilla
+																		? "drop-shadow(0 0 10px #034a84)"
+																		: "none",
+															}}
+														/>
+														{/* Patas de la silla */}
+														<rect
+															x={195 + xOffset - 7}
+															y={200 + yOffset + 10}
+															width="5"
+															height="15"
+															fill={
+																selectedSillas.includes(silla.id) ||
+																	silla.id === selectedSilla
+																	? "#012c4f"
+																	: "#414141"
+															}
+															style={{
+																transition: "all 0.3s ease-in-out",
+																transform:
+																	selectedSillas.includes(silla.id) ||
+																		silla.id === selectedSilla
+																		? "scale(1.01)"
+																		: "scale(1)",
+																filter:
+																	selectedSillas.includes(silla.id) ||
+																		silla.id === selectedSilla
+																		? "drop-shadow(0 0 10px #034a84)"
+																		: "none",
+															}}
+														/>
+														<rect
+															x={195 + xOffset + 10}
+															y={200 + yOffset + 10}
+															width="5"
+															height="15"
+															fill={
+																selectedSillas.includes(silla.id) ||
+																	silla.id === selectedSilla
+																	? "#012c4f"
+																	: "#414141"
+															}
+															style={{
+																transition: "all 0.3s ease-in-out",
+																transform:
+																	selectedSillas.includes(silla.id) ||
+																		silla.id === selectedSilla
+																		? "scale(1.01)"
+																		: "scale(1)",
+																filter:
+																	selectedSillas.includes(silla.id) ||
+																		silla.id === selectedSilla
+																		? "drop-shadow(0 0 10px #034a84)"
+																		: "none",
+															}}
+														/>
+													</g>
+												);
+											})}
+
+										{/* Mesa redonda con perspectiva */}
+										<ellipse
+											cx="200"
+											cy="200"
+											rx="120"
+											ry="60"
+											fill="url(#tableGradient)"
+											stroke="#034a84"
+											strokeWidth="2"
+											style={{ filter: "url(#shadow)" }}
 										/>
-										Desayuno
-									</label>
-									<label className="text-xs uppercase flex items-center gap-1 text-[#034a84]">
-										<input
-											type="checkbox"
-											id="vipCheckbox"
-											//checked={vipSectionMark}
-											//onChange={handleVipCheckboxChange}
-										/>
-										Comida
-									</label>
-									<label className="text-xs uppercase flex items-center gap-1 text-[#034a84]">
-										<input
-											type="checkbox"
-											id="vipCheckbox"
-											//checked={vipSectionMark}
-											//onChange={handleVipCheckboxChange}
-										/>
-										Cena
-									</label>
-								</hgroup>
-								<button
-									className={`w-full py-2 mt-8 mb-20 rounded-lg font-medium text-white transition-colors bg-[#3b82f6] hover:bg-[#034a84]`}
-									onClick={readyToPay && submitHandleTotal}
-								>
-									Reservar
-								</button>
-							</>
-						)}
-					</div>
-				)}
+									</svg>
+								)}
+
+							{((selectedMesa && selectedSillas) ||
+								(selectedMesa && selectedSilla)) && (
+									<button
+										onClick={!readyToPay && submitHandle}
+										className={`w-full py-2 mt-8 rounded-lg font-medium text-white transition-colors ${readyToPay
+											? "cursor-default bg-[#3b82f6]/10"
+											: "bg-[#3b82f6] hover:bg-[#034a84]"
+											}`}
+									>
+										Reservar
+									</button>
+								)}
+
+							{readyToPay && (
+								<>
+									<h1 className="font-medium text-xl text-center border-t-2 mt-4 pt-4 border-gray-300 text-[#034a84]">
+										Reservar Menú
+									</h1>
+									<hgroup className="flex gap-12 justify-center w-full mt-4">
+										<label className="text-xs uppercase flex items-center gap-1 text-[#034a84]">
+											<input
+												type="checkbox"
+												id="breakfastCheckbox"
+												checked={breakfast}
+												onChange={() => setBreakfast(!breakfast)}
+											/>
+											Desayuno
+										</label>
+										<label className="text-xs uppercase flex items-center gap-1 text-[#034a84]">
+											<input
+												type="checkbox"
+												id="lunchCheckbox"
+												checked={lunch}
+												onChange={() => setLunch(!lunch)}
+											/>
+											Comida
+										</label>
+										<label className="text-xs uppercase flex items-center gap-1 text-[#034a84]">
+											<input
+												type="checkbox"
+												id="dinnerCheckbox"
+												checked={dinner}
+												onChange={() => setDinner(!dinner)}
+											/>
+											Cena
+										</label>
+									</hgroup>
+
+									<button
+										className={`w-full py-2 mt-8 mb-20 rounded-lg font-medium text-white transition-colors bg-[#3b82f6] hover:bg-[#034a84]`}
+										onClick={readyToPay && submitHandleTotal}
+									>
+										Reservar
+									</button>
+								</>
+							)}
+						</div>
+					)}
 			</aside>
 
 			<ConfirmationModal

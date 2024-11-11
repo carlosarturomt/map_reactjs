@@ -125,7 +125,7 @@ function LogOutButton() {
 			})
 			.catch((error) => {
 				// An error happened.
-				console.log("error");
+				console.log("error", error);
 			});
 	};
 

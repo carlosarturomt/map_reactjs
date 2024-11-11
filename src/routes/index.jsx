@@ -2,9 +2,10 @@ import { Suspense, lazy } from "react";
 import { useRoutes } from "react-router-dom";
 
 // Lazy loading components
-const HomePage = lazy(() => import("../components/pages/HomePage"));
-const LoginPage = lazy(() => import("../components/pages/LoginPage"));
-const RegisterPage = lazy(() => import("../components/pages/RegisterPage"));
+const HomePage = lazy(() => import("../pages/HomePage"));
+const LoginPage = lazy(() => import("../pages/LoginPage"));
+const RegisterPage = lazy(() => import("../pages/RegisterPage"));
+const AdminPage = lazy(() => import("../pages/AdminPage"));
 const Spinner = lazy(() => import("@components/atoms/Spinner"));
 
 export const Routes = () => {
@@ -12,6 +13,7 @@ export const Routes = () => {
 		{ path: "/", element: <HomePage /> },
 		{ path: "/login", element: <LoginPage /> },
 		{ path: "/register", element: <RegisterPage /> },
+		{ path: "/admin", element: <AdminPage /> },
 		{ path: "/*", element: 'Error' },
 	]);
 
