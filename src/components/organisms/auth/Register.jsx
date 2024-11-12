@@ -41,7 +41,7 @@ const Register = () => {
 			{errors.general && <span className="text-sm text-red-600">{errors.general}</span>}
 
 			{/* Botón de Google */}
-			<div className="w-full my-3 flex-center">
+			<div className="w-full max-w-screen-sm my-3 flex-center">
 				<SimpleButton
 					text={"Regístrarse con Google"}
 					onClick={googleSignInHandler}
