@@ -207,6 +207,10 @@ function MapPage() {
 		event.preventDefault();
 		const newScale = Math.min(Math.max(scale - event.deltaY * 0.01, 1), 10);
 		setScale(newScale);
+		// Si el zoom vuelve a 1, reinicia la posición del mapa
+		if (newScale === 1) {
+			setTranslate({ x: 0, y: 0 });
+		}
 	};
 
 	// Iniciar arrastre
@@ -236,6 +240,14 @@ function MapPage() {
 		setIsPanning(false);
 	};
 
+	// Funciones para los botones de control
+	const zoomIn = () => setScale((prev) => Math.min(prev + 0.2, 10));
+	const zoomOut = () => setScale((prev) => Math.max(prev - 0.2, 1));
+	const resetView = () => {
+		setScale(1);
+		setTranslate({ x: 0, y: 0 });
+	};
+
 	const handleCheckboxChange = (event) => {
 		setSectionMark(event.target.checked);
 	};
@@ -250,7 +262,7 @@ function MapPage() {
 		if (!show) return null;
 
 		return (
-			<div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
+			<div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex-center">
 				<div className="bg-white rounded-lg p-6 w-full max-w-md">
 					<h2 className="text-xl font-semibold mb-4">Confirmar Resevación</h2>
 					<p>
@@ -279,13 +291,13 @@ function MapPage() {
 							<p className="py-2">
 								Además de que ha seleccionado reservar el menú de{" "}
 								<strong>
-								{[
-                                    breakfast && "Desayuno",
-                                    lunch && "Comida",
-                                    dinner && "Cena"
-                                ]
-                                    .filter(Boolean)
-                                    .join(", ")}
+									{[
+										breakfast && "Desayuno",
+										lunch && "Comida",
+										dinner && "Cena"
+									]
+										.filter(Boolean)
+										.join(", ")}
 								</strong>
 							</p>
 						</div>
@@ -363,17 +375,45 @@ function MapPage() {
 		setShowModal(false);
 	};
 
-
 	return (
-		<div className="w-full h-full flex items-center justify-center flex-col-reverse md:flex-row">
-			<aside className="w-full md:w-2/3 p-4 h-screen flex justify-center items-center flex-col bg-[#e0e4ea]">
-				<hgroup className="w-full border-b-2 py-3 border-gray-300">
-					<h1 className="font-semibold text-xl uppercase text-center text-[#333333]">
-						Plano de Espacio
+		<div className="w-full h-screen flex justify-center flex-col-reverse md:flex-row flex-wrap">
+
+			<aside className="w-full pt-14 px-6 pb-4 bg-black/90 text-gray-50">
+				<hgroup className="w-full">
+					<h1 className="font-semibold text-lg">
+						Nombre del evento
 					</h1>
+					<p className="">Fechas del evento, hora</p>
+					<p className="">Ubicación del evento, dirección</p>
 				</hgroup>
+			</aside>
+
+			<aside className="relative w-full md:w-2/3 p-4 h-full flex-center flex-col max-h-[80vh] top-0 bg-gray-50">
+				<div className="absolute top-0 right-0 z-10">
+					<div className="absolute top-3 right-3 bg-white p-2 shadow-lg border border-gray-300 rounded-lg w-28 h-20">
+						<div className="relative w-full h-full bg-gray-200">
+							{/* Rectángulo que representa la vista actual */}
+							<div
+								className="absolute border border-red-500 bg-red-500/30"
+								style={{
+									left: `${((translate.x + (2500 / 2) * (1 - scale)) / 2500) * -9}%`,
+									top: `${((translate.y + (2500 / 2) * (1 - scale)) / 2500) * -10}%`,
+									width: `${(900 / (2500 * scale)) * 275}%`,
+									height: `${(900 / (2500 * scale)) * 275}%`,
+								}}
+							/>
+						</div>
+						{/* Botones de control de zoom */}
+						<div className="absolute top-3 -left-10 flex flex-col gap-2">
+							<button className="bg-white p-2 shadow-md border border-gray-300 rounded" onClick={zoomIn}>➕</button>
+							<button className="bg-white p-2 shadow-md border border-gray-300 rounded" onClick={zoomOut}>➖</button>
+							<button className="bg-white p-2 shadow-md border border-gray-300 rounded" onClick={resetView}>↺</button>
+						</div>
+					</div>
+				</div>
+
 				<div
-					className="overflow-auto flex justify-center items-center"
+					className="overflow-auto flex-center"
 					style={{
 						width: "100%",
 						height: "100%",
@@ -387,13 +427,13 @@ function MapPage() {
 				>
 					<svg
 						ref={svgRef}
-						width="1000"
-						height="600"
+						width="900"
+						height="500"
 						viewBox="0 -1000 4500 4000"
 						style={{
 							transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
 							transformOrigin: "center",
-							background: "#e0e4ea",
+							//background: "#e0e4ea",
 						}}
 					>
 						<g>
@@ -642,7 +682,7 @@ function MapPage() {
 				</div>
 			</aside>
 
-			<aside className="w-full md:w-1/3 p-4 h-screen overflow-y-auto bg-[#f9fafb]">
+			<aside className="relative w-full md:w-1/3 p-4 h-full max-h-[80vh] overflow-y-auto shadow-lg shadow-black/50 bg-gray-50">
 				<hgroup className="pt-3">
 					<h1 className="font-medium text-xl text-center text-[#034a84]">
 						{selectedSilla || selectedMesa ? "Tu selección" : "Selecciona"}
@@ -951,8 +991,8 @@ function MapPage() {
 											<input
 												type="checkbox"
 												id="lunchCheckbox"
-												checked={lunch}
 												onChange={() => setLunch(!lunch)}
+												checked={lunch}
 											/>
 											Comida
 										</label>

@@ -1,3 +1,57 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+* {
+    font-family: "Raleway", sans-serif;
+    scrollbar-width: none;
+
+    body {
+        background: #f5f6fa;
+    }
+}
+
+.flex-center {
+    @apply flex items-center justify-center;
+}
+
+.text-border-highlight {
+    -webkit-text-stroke: 1px #00a86b;
+}
+
+.no-scroll {
+    overflow: hidden;
+}
+
+.animate-spin-reverse {
+    animation-name: animate-spin-reverse;
+    animation-duration: 1s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+.modal-fullscreen {
+    height: 100vh;
+    overflow: hidden;
+    /* Desactiva el scroll dentro del modal */
+}
+
+input::placeholder {
+    color: #00a86a8e;
+    /* Color por defecto del placeholder */
+}
+
+input:focus::placeholder {
+    color: #00a86b;
+    /* Color del placeholder al enfocar */
+}
+
+@keyframes animate-spin-reverse {
+    from {
+        transform: rotate(360deg);
+    }
+
+    to {
+        transform: rotate(0deg);
+    }
+}
