@@ -8,7 +8,9 @@ function HomePage() {
     //return user ? <MapPage /> : "Inicia sesión";
 
     return (
-        <p>Home</p>
+        <div className="w-full h-screen py-3 px-6">
+            <p>Home</p>
+        </div>
     )
 }
 

@@ -29,16 +29,16 @@ const Navigation = () => {
 
             {/* Desktop Hamburger Menu */}
             {!isOpen &&
-                <div className="hidden md:flex fixed top-4 left-4 z-50">
-                    <button onClick={() => setIsOpen(!isOpen)} className="p-2 space-y-1">
-                        <span className="w-6 h-[2px] bg-gray-50 flex-center"></span>
-                        <span className="w-5 h-[2px] bg-gray-50 flex-center"></span>
-                        <span className="w-4 h-[2px] bg-gray-50 flex-center"></span>
+                <div className="hidden md:flex fixed top-0 left-0 z-50 px-4 w-full h-12 bg-primary-black">
+                    <button onClick={() => setIsOpen(!isOpen)} className="p-2 space-y-[5px]">
+                        <span className="w-6 h-[1.5px] rounded-full bg-gray-50 flex-center"></span>
+                        <span className="w-5 h-[1.5px] rounded-full bg-gray-50 flex-center"></span>
+                        <span className="w-4 h-[1.5px] rounded-full bg-gray-50 flex-center"></span>
                     </button>
                 </div>}
 
             {/* Sidebar Menu */}
-            <aside className={`fixed top-0 left-0 h-full w-64 bg-black/90 text-main-light backdrop-blur transform ${isOpen ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 ease-in-out z-40 p-4`}>
+            <aside className={`fixed top-0 left-0 h-full w-64 bg-primary-black text-main-light backdrop-blur transform ${isOpen ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 ease-in-out z-40 p-4`}>
                 <button onClick={() => setIsOpen(false)} className="absolute top-5 left-4">
                     <span className="w-4 h-[2px] bg-gray-50 flex-center -rotate-45 mt-1"></span>
                     <span className="w-4 h-[2px] bg-gray-50 flex-center rotate-45 mt-2"></span>

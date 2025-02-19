@@ -30,6 +30,10 @@
     animation-iteration-count: infinite;
 }
 
+.h-calc-70vh {
+    height: calc(100vh - 48px);
+}
+
 .modal-fullscreen {
     height: 100vh;
     overflow: hidden;
